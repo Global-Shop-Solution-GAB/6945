@@ -1,0 +1,55 @@
+﻿Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+Function.Intrinsic.UI.UsePixels ' Allows you to use Pixels instead of Twips throughout
+V.Local.sRet.Declare(String)
+
+'Author: Angel Tudon
+'Ticket: SCH010-72820221008-0
+'Customer: Schippers & Crew, Inc
+'This is a simple script to create the needed custom views for report GCG_6945_SUFFIX_PARTS.rpt. This will be attached to the report as a preproc to run each time the report is printed, verifying that the views exists and creating them if not. 
+
+'Checking that needed views for Suffixed Parts Report exists and creating them if not
+F.ODBC.Connection!con.OpenCompanyConnection
+
+F.ODBC.Connection!con.ExecuteAndReturn("Select * from X$View where Xv$Name = 'V_GCG_6945_SUFFIX'", V.Local.sRet)
+F.Intrinsic.Control.If(V.Local.sRet, =, "")
+	'Create view V_GCG_6945_SUFFIX
+	F.ODBC.Connection!con.Execute("CREATE VIEW V_GCG_6945_SUFFIX AS SELECT A .PART ,A .CUST ,RTRIM (RIGHT (A .PART ,17 ))MAIN_PART ,A .MFG_PART ,B .DESCRIPTION ,D .QTY_ONHAND ,C .MATL ,C .LABOR ,C .OVHD ,C .OUTS ,C .FREIGHT ,C .OTH ,C .COST TOTAL_COST FROM PART_XREF_USER A LEFT JOIN INVENTORY_MSTR B ON RTRIM (RIGHT (A .PART ,17 ))= RTRIM (B .PART )LEFT JOIN INVENTORY_COST C ON RTRIM (RIGHT (A .PART ,17 ))= RTRIM (C .PART )LEFT JOIN INVENTORY_MSTR D ON A .PART = D .PART WHERE (A .PART LIKE '77-%' OR A .PART LIKE '80-%' )AND (RTRIM (RIGHT (A .PART ,17 ))IN (SELECT INVENTORY_MSTR .PART FROM INVENTORY_MSTR INVENTORY_MSTR ))ORDER BY A .cust DESC")
+	
+F.Intrinsic.Control.EndIf
+
+F.ODBC.Connection!con.ExecuteAndReturn("Select * from X$View where Xv$Name = 'V_GCG_6945_BOM_P'", V.Local.sRet)
+F.Intrinsic.Control.If(V.Local.sRet, =, "")
+	'Create view V_GCG_6945_BOM_P
+	F.ODBC.Connection!con.Execute("CREATE VIEW V_GCG_6945_BOM_P AS SELECT DISTINCT rtrim (V_BOM_MSTR .PARENT )PARENT ,'1' P_FLAG FROM V_BOM_MSTR V_BOM_MSTR" )
+	
+F.Intrinsic.Control.EndIf
+	'
+F.ODBC.Connection!con.ExecuteAndReturn("Select * from X$View where Xv$Name = 'V_GCG_6945_BOM_C'", V.Local.sRet)
+F.Intrinsic.Control.If(V.Local.sRet, =, "")
+	'Create view V_GCG_6945_BOM_C
+	F.ODBC.Connection!con.Execute("CREATE VIEW V_GCG_6945_BOM_C AS SELECT DISTINCT rtrim (V_BOM_MSTR .PART )CHILD ,'2' C_FLAG FROM V_BOM_MSTR V_BOM_MSTR WHERE V_BOM_MSTR .SEQUENCE_BOM <> '0000'" )
+	
+F.Intrinsic.Control.EndIf
+
+
+v.Local.sBI.Declare
+v.Local.sName.Declare
+v.Local.sParam.Declare
+
+'Load report with all customers
+f.Intrinsic.String.Split("Customer_Start*!*Customer_End","*!*",v.Local.sName)
+f.Intrinsic.String.Split("0*!*Z", "*!*", V.Local.sParam)
+f.Global.BI.GetIDFromName("GCG_6945_SUFFIX_PARTS.rpt",v.Local.sBI)
+f.Global.BI.PrintReport(v.Local.sBI,0,v.Local.sName,v.Local.sParam,false)
+
+F.Intrinsic.Control.End
+
+Program.Sub.Main.End
+
+Program.Sub.Comments.Start
+${$5$}$20.1.8286.22461$}$1
+${$6$}$Angel$}$20221026162706882$}$KXl0r/FkrMYwb/r4ukQ87aOTsTN7X2eamgwD8Xk+TFL0FC6gBSsObCx4spYCDZJThiPm/otwlVA=
+Program.Sub.Comments.End
